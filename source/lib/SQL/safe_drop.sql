@@ -1,0 +1,13 @@
+CREATE OR REPLACE 
+PROCEDURE safe_drop (table_name VARCHAR) IS
+BEGIN
+  EXECUTE IMMEDIATE 'DROP TABLE '|| table_name ||' PURGE';
+EXCEPTION
+  WHEN OTHERS THEN
+    IF SQLCODE != -942 THEN
+      RAISE;
+    END IF;
+END safe_drop;
+/
+
+EXIT SUCCESS;

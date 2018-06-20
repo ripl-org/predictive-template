@@ -1,0 +1,5 @@
+input
+scratch/*
+# Ignore SCons build database so that each user maintains their own database
+# and checks shared files out of the SCons cache.
+.sconsign.dblite

@@ -1,0 +1,5 @@
+execfile("./source/lib/SCons/logging.py")
+execfile("./source/lib/SCons/env.py")
+execfile("./source/lib/SCons/misc.py")
+execfile("./source/lib/SCons/builders.py")
+execfile("./source/lib/SCons/sql_table_node.py")

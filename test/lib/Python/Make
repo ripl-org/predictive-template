@@ -1,0 +1,12 @@
+Import("*")
+
+env.Command("#scratch/test/lib/Python.log",
+            ["test_connection.py",
+             "test_save_table.py",
+             "test_read_csv.csv",
+             "#source/lib/Python/riipl/__init__.py",
+             "#source/lib/Python/riipl/connection.py",
+             "#source/lib/Python/riipl/model.py",
+             "#source/lib/Python/riipl/sql_exceptions.py",
+             "#source/lib/Python/riipl/test.py"],
+            "python -m unittest discover -s test/lib/Python -p 'test_*.py' >$TARGET")

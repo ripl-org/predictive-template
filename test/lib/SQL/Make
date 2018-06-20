@@ -1,0 +1,9 @@
+Import("*")
+
+env.Command("#scratch/test/lib/SQL.log",
+            ["test_assert_primary_key.py",
+             "test_is_numeric.py",
+             "test_safe_drop.py",
+             "#source/lib/Python/riipl/__init__.py",
+             "#source/lib/Python/riipl/connection.py"],
+            "python -m unittest discover -s test/lib/SQL -p 'test_*.py' >$TARGET")
