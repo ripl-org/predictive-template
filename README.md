@@ -13,11 +13,12 @@ extended to other compute environments with some modification.
 
 ## Repo layout
 
-|-|-|
+| Subdirectory | Description |
+| --- | --- |
 | **input** | Raw data which will not be stored in the repo. This is typically a symlink to a read-only directly containing archival flat files. |
-| **output** | Small output files that will be versioned in git. This is especially helpful for storing results that need to quickly accessed in the future without recomputing them. However, large files will . |
-| **scratch** | Staging area for large intermediate and output files. These files will be cached by Scons, so they often do not need to be recomputed again after they have been created the first time. Scons caches the output base on the full checksums of all dependencies. |
-| **source/inputs** | Source files for staging, transforming, indexing flat files from **inputs**.
+| **output** | Small output files that will be versioned in git. This is especially helpful for storing results that need to quickly accessed in the future without recomputing them. However, large files should be avoided since they will bloat the size of the git repo. |
+| **scratch** | Staging area for large intermediate and output files. These files will be cached by SCons, so they often do not need to be recomputed again after they have been created the first time. SCons caches the output base on the full checksums of all dependencies. |
+| **source/inputs** | Source files for staging, transforming, indexing flat files from **inputs**. |
 | **source/populations** | Source files for defining populations of interest for the model. |
 | **source/outcomes** | Source files for building the model's outcomes (typically depends on populations). |
 | **source/features** | Source files for building model's features (typically depends on populations). |
@@ -110,7 +111,7 @@ manager, database connections are automatically closed even in the event of an
 unhandled exception. For this reason, it is recommended that Connections be
 opened using the "with ... as ..." keyword.
 
-## `execute` method
+#### `execute` method
 
 Automatically pastes parameters into SQL statements.  Parameter names must be
 enclosed in '%' and must resolve to a defined variable in the caller's local
@@ -123,7 +124,7 @@ Example:
         max_spend = 10000
         cxn.execute("SELECT * FROM table WHERE spend <= %max_spend%")
 
-## `save_table` method
+#### `save_table` method
 
 Based on Stata's `save_data` command, but for tables in an Oracle database.  It
 can add a primary key index on the table, and will print out summary statistics
@@ -142,12 +143,12 @@ Example:
         cxn.execute(sql)
         cxn.save_table("new_table", "key_variable")
 
-## `read_csv` method
+#### `read_csv` method
 
 Creates a SQL table from a csv file using Oracle's sqlldr utility. Requires a
 schema list that maps columns to their Oracle types.
 
-## `read_dataframe` method
+#### `read_dataframe` method
 
 Like `read_csv`, but starts from a pandas dataframe, and can automatically
 infer the schema based on the pandas column types.
