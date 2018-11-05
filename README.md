@@ -1,13 +1,13 @@
-# RIIPL Predictive Modeling Template
+# RIPL Predictive Modeling Template
 
 This template contains the base code underlying several predictive models
-developed by the [Rhode Island Innovative Policy Lab](https://riipl.org).  The
+developed by [Research Improving People's Lives](https://ripl.org).  The
 primary goal of the template is to enable reproducible and automated research
 results, and to provide a standardized framework for creating predictive models
 across different research projects. This template repo can be forked and
 modified for the populations, outcomes, and features of a specific predictive
 model. It is designed around a specific secure research computing environment
-at RIIPL that provides an Oracle database and a network-attached file system
+at RIPL that provides an Oracle database and a network-attached file system
 with a results cache (`/data/cache/`) shared by all users. However, it could be
 extended to other compute environments with some modification.
 
