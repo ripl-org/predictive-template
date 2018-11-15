@@ -145,7 +145,7 @@ Example:
 
 #### `read_csv` method
 
-Creates a SQL table from a csv file using Oracle's sqlldr utility. Requires a
+Creates a SQL table from a csv file using Oracle's `sqlldr` utility. Requires a
 schema list that maps columns to their Oracle types.
 
 #### `read_dataframe` method
