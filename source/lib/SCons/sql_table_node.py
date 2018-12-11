@@ -2,7 +2,7 @@ import SCons
 import atexit
 import cx_Oracle
 
-_owner = "OPS${}".format(env.USERNAME.upper())
+_owner = env.USERNAME.upper()
 _table_cache = {}
 _cxn = cx_Oracle.connect("/")
 _cxn.autocommit = 1
@@ -56,6 +56,13 @@ class _SQLTable(SCons.Node.Node):
                      WHERE table_name = '{}'
                     """.format(self.name.upper()))
         exists = cur.fetchone() is not None
+        if exists:
+            cur.execute("""
+                        SELECT COUNT(*)
+                          FROM {}
+                        """.format(self.name.upper()))
+            count = cur.fetchone()
+            exists = count is not None and count[0] > 0
         cur.close()
         self._memo["exists"] = exists
         return exists
@@ -66,7 +73,10 @@ class _SQLTable(SCons.Node.Node):
             return ninfo.csig
         except AttributeError:
             pass
-        csig = SCons.Util.MD5signature(self.get_contents())
+        if self.exists():
+            csig = SCons.Util.MD5signature(self.get_contents())
+        else:
+            csig = 0
         ninfo.csig = csig
         return csig
 
@@ -79,15 +89,18 @@ class _SQLTable(SCons.Node.Node):
             return self._memo["get_size"]
         except KeyError:
             pass
-	cur = _cxn.cursor()
-        cur.execute("""
-                    SELECT bytes
-                      FROM user_segments
-                     WHERE segment_type = 'TABLE' AND
-                           segment_name = '{}'
-                    """.format(self.name.upper()))
-        size = cur.fetchone()[0]
-        cur.close()
+        if self.exists():
+            cur = _cxn.cursor()
+            cur.execute("""
+                        SELECT bytes
+                          FROM user_segments
+                         WHERE segment_type = 'TABLE' AND
+                               segment_name = '{}'
+                        """.format(self.name.upper()))
+            size = cur.fetchone()[0]
+            cur.close()
+        else:
+            size = 0
         self._memo["get_size"] = size
         return size
 
@@ -100,17 +113,18 @@ class _SQLTable(SCons.Node.Node):
             return self._memo["get_timestamp"]
         except KeyError:
             pass
-        if not self.exists():
-            return 0
-	cur = _cxn.cursor()
-        cur.execute("""
-                    SELECT FLOOR(last_ddl_time - TO_DATE('19700101', 'YYYYMMDD'))*24*3600 AS mtime
-                      FROM user_objects
-                     WHERE object_type = 'TABLE' AND
-                           object_name = '{}'
-                    """.format(self.name.upper()))
-        ts = cur.fetchone()[0]
-        cur.close()
+        if self.exists():
+            cur = _cxn.cursor()
+            cur.execute("""
+                        SELECT FLOOR(last_ddl_time - TO_DATE('19700101', 'YYYYMMDD'))*24*3600 AS mtime
+                          FROM user_objects
+                         WHERE object_type = 'TABLE' AND
+                               object_name = '{}'
+                        """.format(self.name.upper()))
+            ts = cur.fetchone()[0]
+            cur.close()
+        else:
+            ts = 0
         self._memo["get_timestamp"] = ts
         return ts
 
@@ -147,6 +161,7 @@ class _SQLTable(SCons.Node.Node):
 
 
 def SQLTable(name):
+    name = name.upper()
     try:
         return _table_cache[name]
     except KeyError:

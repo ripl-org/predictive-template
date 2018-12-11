@@ -1,20 +1,19 @@
 import csv
+import cx_Oracle
+import hashlib
 import inspect
 import pandas as pd
-import pyodbc
 import os
 import re
 import subprocess
 import tempfile
-from sql_exceptions import *
+from .sql_exceptions import *
 
 class Connection:
 
     def __init__(self):
-        self.schema = "OPS$" + os.environ["USER"].upper()
-        self.cxn_string = "DSN=RIIPL"
-        self.password = "/"
-        self._connection = pyodbc.connect(self.cxn_string)
+        self.schema = os.environ["USER"].upper()
+        self._connection = cx_Oracle.connect("/")
 
 
     def _die_if_not_connected(self):
@@ -35,7 +34,7 @@ class Connection:
         try:
             self._connection.close()
             self._connection = None
-        except pyodbc.ProgrammingError:
+        except cx_Oracle.ProgrammingError:
             pass
 
 
@@ -69,7 +68,7 @@ class Connection:
         cursor = self._connection.cursor()
         sql = self._prepare_sql(sql)
         if (verbose is True):
-            print sql
+            print(sql)
         cursor.execute(sql)
         if (commit is True): 
             self._connection.commit()
@@ -102,6 +101,9 @@ class Connection:
                            """.format(table.upper()))
         columns = self.get_columns(table)
         if not columns: return ""
+        m = hashlib.sha256()
+        m.update(",".join(map("|".join, columns)).encode("utf-8"))
+        table_hash = m.hexdigest()
         # Hash the columns values in each row, but sum the hashes across rows so
         # that row ordering does not impact the checksum.
         cur = self.execute("""
@@ -109,7 +111,10 @@ class Connection:
                              FROM {}
                            """.format(" || '|' || ".join(c[0] for c in columns),
                                       table.upper()))
-        return "{}:{}".format(cur.fetchone()[0], ",".join(map("|".join, columns)))
+        # Combine the data hash and the table schema hash
+        checksum = "{}:{}".format(cur.fetchone()[0], table_hash)
+        print("checksum for '{}': {}".format(table, checksum))
+        return checksum
 
 
     def get_stats(self, table):
@@ -149,11 +154,12 @@ class Connection:
         options = "CASCADE CONSTRAINTS " if (cascade_constraints) else " "
 
         for table in tables:
-            print "Clearing table:", table
+            print("Clearing table:", table)
             try:
                 self.execute("DROP TABLE %table% %options%PURGE")
-            except pyodbc.ProgrammingError as rc:
-                if rc[0] != "42S02":
+            # cx_Oracle.DatabaseError: ORA-00942: table or view does not exist
+            except cx_Oracle.DatabaseError as rc:
+                if not "ORA-00942" in str(rc):
                     raise rc
 
 
@@ -174,12 +180,16 @@ class Connection:
         self.execute("ALTER TABLE %table% ENABLE PRIMARY KEY")
 
 
-    def read_csv(self, filename, schema, table):
+    def read_csv(self, filename, schema, table, delim=","):
         """
         Load a csv file with the provided schema into a SQL table with sqlldr.
         """
+        # Determine file line endings
+        with open(filename, "U") as f:
+            f.readline()
+            newline = repr(f.newlines)
         # Create a ctl file from the schema
-        ctl_type = lambda x: x if x.startswith("DATE") else "CHAR"
+        ctl_type = lambda x: x if (x.startswith("DATE") or x == "FILLER") else "CHAR"
         columns = ["{} {}".format(x[0], ctl_type(x[1])) for x in schema]
         ctl = """\
 OPTIONS(
@@ -194,28 +204,29 @@ OPTIONS(
 )
 UNRECOVERABLE
 LOAD DATA
+INFILE '{}' "str {}"
 APPEND
 INTO TABLE {}
-FIELDS TERMINATED BY ','
+FIELDS TERMINATED BY '{}'
 OPTIONALLY ENCLOSED BY '"'
 TRAILING NULLCOLS
 (
 {}
 )
-""".format(table, ",\n".join(columns))
+""".format(filename, newline, table, delim, ",\n".join(columns))
         fd, ctlfile = tempfile.mkstemp(prefix="riipl_connection_", suffix=".ctl")
-        os.write(fd, ctl)
-        os.close(fd)
+        with open(fd, "w") as f:
+            f.write(ctl)
 
         # Clear and create the sql table
         self.clear_tables(table)
-        columns = ['{} {}'.format(x[0], x[1].partition(" ")[0]) for x in schema]
+        columns = ['{} {}'.format(x[0], x[1].partition(" ")[0]) for x in schema if x[1] is not "FILLER"]
         sql = "CREATE TABLE {} ({})".format(table, ",\n  ".join(columns))
         self.execute(sql, verbose=True)
 
         # Launch sqlldr with subprocess
         subprocess.check_call(["sqlldr",
-                               "userid='/',control={0},log={0}.log,data={1}".format(ctlfile, filename)])
+                               "userid='/',control={0},log={0}.log".format(ctlfile, filename)])
         # Make table read-only
         self.execute("ALTER TABLE {} READ ONLY".format(table), verbose=True)
 
@@ -241,7 +252,8 @@ TRAILING NULLCOLS
 
         # Write csv to temporary file
         fd, csvfile = tempfile.mkstemp(prefix="riipl_connection_", suffix=".csv")
-        df.to_csv(os.fdopen(fd, "w"), index=False)
+        with os.fdopen(fd, "w") as f:
+            df.to_csv(f, index=False)
 
         # Load with sqlldr
         self.read_csv(csvfile, schema, tablename)
@@ -263,7 +275,7 @@ TRAILING NULLCOLS
                 rows = cursor.fetchmany(BATCH_SIZE)
 
 
-    def save_table(self, table, key=None, checksum=False):
+    def save_table(self, table, key=None, checksum=True):
         """
         Helper method to finalize a permanent SQL table by creating a primary key,
         marking it read-only, and storing a checksum of the contents as a comment.
@@ -277,7 +289,7 @@ TRAILING NULLCOLS
         # Make table read-only
         try:
             self.execute("ALTER TABLE {} READ ONLY".format(table))
-        except pyodbc.Error:
+        except cx_Oracle.Error:
             # If the table is already read-only
             pass
 
@@ -290,12 +302,12 @@ TRAILING NULLCOLS
 
         # Print and return stats
         stats = self.get_stats(table)
-        print "=" * 100
-        print "Table:", table
-        print "Key:", key
-        print "=" * 100
-        print stats.to_string(index=False)
-        print "\n"
+        print("=" * 100)
+        print("Table:", table)
+        print("Key:", key)
+        print("=" * 100)
+        print(stats.to_string(index=False))
+        print("\n")
         return stats
 
 

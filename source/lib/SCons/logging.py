@@ -58,7 +58,7 @@ class RIIPLCommandSpawner:
         except OSError as x:
             if x.errno != 10:
                 raise x
-                print 'OSError ignored on command: %s' % command_string
+                print('OSError ignored on command: %s' % command_string)
                 retval = 0
 
         if retval == 0:

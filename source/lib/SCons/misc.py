@@ -27,19 +27,19 @@ import sys
 
 class BadArgumentError(Exception):
     def __init__(self, message = ''):
-        print 'Error: ' + message
+        print('Error:', message)
 
 class BadExecutableError(Exception):
     def __init__(self, message = ''):
-        print 'Error: ' + message
+        print('Error:', message)
 
 class BadExtensionError(Exception):
     def __init__(self, message = ''):
-        print 'Error: ' + message
+        print('Error:', message)
 
 class LFSError(Exception):
     def __init__(self, message = ''):
-        print 'Error: ' + message
+        print('Error:', message)
 
 def check_lfs():
     try:
@@ -86,8 +86,8 @@ def is_exe(file_path):
     return os.path.isfile(file_path) and os.access(file_path, os.X_OK)
 
 def make_list_if_string(source):
-    if isinstance(source, str):
-        source = [source]
+    if isinstance(source, str) or isinstance(source, bytes):
+        source = [str(source)]
     return source
 
 def check_code_extension(source_file, software):
