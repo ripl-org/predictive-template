@@ -1,0 +1,32 @@
+Import('*')
+
+features = []
+manifests = []
+
+def Feature(name, deps, *args):
+    """
+    Helper function for succinctly specifying a feature file and
+    its arguments.
+    """
+    env.Python(["#scratch/features/{}.csv".format(name),
+                "#output/features/{}.manifest".format(name)], 
+               ["{}.py".format(name)] + [tables[name] for name in deps] + list(args))
+    env.Python("#scratch/features/{}.normalized.csv".format(name),
+               ["normalize.py", "#scratch/population.csv", "#scratch/features/{}.csv".format(name)],
+               log_path="#output/features/{}.normalize.log".format(name))
+    features.append("#scratch/features/{}.normalized.csv".format(name))
+    manifests.append("#output/features/{}.manifest".format(name))
+
+
+# Add features here...
+
+# Manifest
+
+env.Command("#output/features/manifest.tsv",
+            manifests,
+            "cat $SOURCES > $TARGET")
+
+features = {"all": features}
+Export("features")
+
+# vim: syntax=python expandtab sw=4 ts=4

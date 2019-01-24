@@ -1,8 +1,0 @@
-Import("*")
-
-log_path = "#scratch/lib/SQL/{}.log"
-for f in ["safe_drop", "assert_primary_key", "is_numeric"]:
-    env.Command(target=log_path.format(f),
-                source="{}.sql".format(f),
-                action="sqlplus / @$SOURCE",
-	        ENV=SetLogPath(env, log_path.format(f)))

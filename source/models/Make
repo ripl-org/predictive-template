@@ -1,0 +1,35 @@
+Import("*")
+
+# model matrix and correlations
+for feature in features:
+    env.R(["#scratch/models/matrix.{}.RData".format(feature),
+           "#scratch/models/matrix.{}.train.txt".format(feature)],
+          ["matrix.R", "#scratch/outcomes.csv"] + features[feature],
+          log_path="#output/models/matrix.{}.R.log".format(feature))
+    env.R("#output/models/corr.pairwise.{}.csv".format(feature),
+          ["corr.R",
+           "#scratch/models/matrix.{}.RData".format(feature)],
+          log_path="#output/models/corr.{}.log".format(feature))
+
+# lasso
+for feature in features:
+    for outcome in outcomes:
+        env.R(["#scratch/models/gamlr.{}.{}.RData".format(feature, outcome),
+               "#output/models/gamlr.{}.{}.beta.csv".format(feature, outcome)],
+              ["gamlr.R",
+               constants["RANDOM_SEED"],
+               "#scratch/models/matrix.{}.RData".format(feature),
+               Value(outcome)],
+              log_path="#output/models/gamlr.{}.{}.log".format(feature, outcome))
+
+# postlasso
+for feature in features:
+    for outcome in outcomes:
+        env.R("#output/models/postlasso.{}.{}.csv".format(feature, outcome),
+              ["postlasso.R",
+               constants["RANDOM_SEED"],
+               "#scratch/models/matrix.{}.RData".format(feature),
+               Value(outcome),
+               "#output/models/gamlr.{}.{}.beta.csv".format(feature, outcome)],
+              log_path="#output/models/postlasso.{}.{}.log".format(feature, outcome))
+

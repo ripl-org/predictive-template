@@ -1,3 +1,3 @@
 CONSTANTS = {
-    'RANDOM_SEED': 1337,
+    "RANDOM_SEED": 1337,
 }

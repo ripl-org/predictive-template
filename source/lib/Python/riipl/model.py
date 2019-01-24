@@ -105,7 +105,7 @@ def SaveFeatures(df, out, manifest_file, population, labels, bool_features=[]):
 
     print(df.describe())
 
-    df.to_csv(out)
+    df.to_csv(out, float_format="%g")
 
 
 def SaveTensor(tensor, labels, fill_values, population_def, out, nsteps=None):
@@ -203,7 +203,7 @@ class FeaturePlots(object):
             sns.pointplot(x=x, y=self.y, orient="h", n_boot=100)
             plt.xlim((0, 1))
         else:
-            sns.violinplot(x=x, y=self.y, orient="h")
+            sns.boxplot(x=x, y=self.y, orient="h")
         plt.tight_layout()
         svg = StringIO()
         plt.savefig(svg, format="svg")
