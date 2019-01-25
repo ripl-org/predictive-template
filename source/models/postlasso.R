@@ -19,6 +19,6 @@ print(selected)
 
 X_train <- X_train[,selected]
 
-model <- glm(y=y_train, x=X_train, family=binomial)
+model <- glm.fit(x=X_train, y=y_train, family=binomial())
 
 write.csv(summary.glm(model), file=out_file)
