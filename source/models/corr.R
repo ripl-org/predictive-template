@@ -1,3 +1,4 @@
+library(assertthat)
 library(Matrix)
 
 args <- commandArgs(trailingOnly=TRUE)
@@ -34,5 +35,9 @@ cor[upper.tri(cor, TRUE)] <- NA
 i <- which(abs(cor) >= 0.7, arr.ind=TRUE)
 top <- data.frame(matrix(colnames(cor)[as.vector(i)], ncol=2), value=cor[i])
 write.csv(top, file=out_file)
+
+k <- kappa(X_train, exact=TRUE)
+print(paste0("condition number (kappa): ", k))
+assert_that(k < 1000000)
 
 # vim: expandtab sw=4 ts=4
