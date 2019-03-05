@@ -7,9 +7,9 @@ try:
 except OSError:
     pass
 
-os.symlink("/data/{0}/{0}v11".format(env.PROJECT_KEY, "input")
-
 exec(compile(open("./source/lib/SCons/setup.py").read(), "./source/lib/SCons/setup.py", "exec"))
+
+os.symlink("/data/{0}/{0}v11".format(env.PROJECT_KEY, "input"))
 
 env.CacheDir("/data/{0}/{0}-cache".format(env.PROJECT_KEY))
 env.Decider("MD5-timestamp")
