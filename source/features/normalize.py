@@ -38,18 +38,17 @@ for name, t in zip(x.columns, x.dtypes):
         if ((x[name] == 0) | (x[name] == 1)).all():
             X[name] = x[name].astype(int)
         else:
-            m = np.min(x.loc[train, name])
-            r = np.max(x.loc[train, name]) - m
-            if r != 0:
-                X[name] = (x[name] - m) / float(r)
+            m = x.loc[train, name].mean()
+            s = x.loc[train, name].std()
+            if s != 0:
+                X[name] = x[name].subtract(m).divide(s)
             else:
-                print("warning: {} has min = max".format(name))
+                print("warning: {} has 0 stdev".format(name))
         # Impute missing values
         if X[name].isnull().any():
-            m = X.loc[(x[name].notnull() & train), name].mean()
-            print("Filling missing", name, "with mean value", m)
+            print("Filling missing", name, "with mean value")
             X[name + "_MISSING"] = X[name].isnull().astype(int)
-            X.loc[:, name] = X[name].fillna(m)
+            X.loc[:, name] = X[name].fillna(0)
 
 del X["SUBSET"]
 

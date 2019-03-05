@@ -3,6 +3,8 @@ Import('*')
 features = []
 manifests = []
 
+no_norm = frozenset()
+
 def Feature(name, deps, *args):
     """
     Helper function for succinctly specifying a feature file and
@@ -11,10 +13,13 @@ def Feature(name, deps, *args):
     env.Python(["#scratch/features/{}.csv".format(name),
                 "#output/features/{}.manifest".format(name)], 
                ["{}.py".format(name)] + [tables[name] for name in deps] + list(args))
-    env.Python("#scratch/features/{}.normalized.csv".format(name),
-               ["normalize.py", "#scratch/population.csv", "#scratch/features/{}.csv".format(name)],
-               log_path="#output/features/{}.normalize.log".format(name))
-    features.append("#scratch/features/{}.normalized.csv".format(name))
+    if name in no_norm:
+        features.append("#scratch/features/{}.csv".format(name))
+    else:
+        env.Python("#scratch/features/{}.normalized.csv".format(name),
+                   ["normalize.py", "#scratch/population.csv", "#scratch/features/{}.csv".format(name)],
+                   log_path="#output/features/{}.normalize.log".format(name))
+        features.append("#scratch/features/{}.normalized.csv".format(name))
     manifests.append("#output/features/{}.manifest".format(name))
 
 
