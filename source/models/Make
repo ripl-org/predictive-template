@@ -11,25 +11,48 @@ for feature in features:
            "#scratch/models/matrix.{}.RData".format(feature)],
           log_path="#output/models/corr.{}.log".format(feature))
 
-# lasso
+# bolasso
 for feature in features:
     for outcome in outcomes:
-        env.R(["#scratch/models/gamlr.{}.{}.RData".format(feature, outcome),
-               "#output/models/gamlr.{}.{}.beta.csv".format(feature, outcome)],
-              ["gamlr.R",
-               constants["RANDOM_SEED"],
-               "#scratch/models/matrix.{}.RData".format(feature),
-               Value(outcome)],
-              log_path="#output/models/gamlr.{}.{}.log".format(feature, outcome))
+        for i in range(env.BOLASSO_BOOTSTRAPS):
+            env.R(["#scratch/models/bolasso/gamlr.{}.{}.{}.RData".format(feature, outcome, i),
+                   "#scratch/models/bolasso/gamlr.{}.{}.{}.beta.csv".format(feature, outcome, i)],
+                  ["gamlr-bootstrap.R",
+                   constants["RANDOM_SEED"],
+                   "#scratch/models/matrix.{}.RData".format(feature),
+                   Value(outcome),
+                   Value(i)],
+                  log_path="#output/models/bolasso/gamlr.{}.{}.{}.log".format(feature, outcome, i))
+        env.Python(["#output/models/bolasso.bootstraps.{}.{}.csv".format(feature, outcome),
+                    "#output/models/bolasso.freq.{}.{}.csv".format(feature, outcome)],
+                   ["bolasso.py", "#output/features/manifest.tsv"] + \
+                   ["#scratch/models/bolasso/gamlr.{}.{}.{}.beta.csv".format(feature, outcome, i) 
+                    for i in range(env.BOLASSO_BOOTSTRAPS)],
+                   log_path="#output/models/bolasso.{}.{}.log".format(feature, outcome))
 
 # postlasso
 for feature in features:
     for outcome in outcomes:
-        env.R("#output/models/postlasso.{}.{}.csv".format(feature, outcome),
+        env.R(["#output/models/postlasso.{}.{}.csv".format(feature, outcome),
+               "#output/models/postlasso.{}.{}.y_pred.csv".format(feature, outcome)],
               ["postlasso.R",
                constants["RANDOM_SEED"],
                "#scratch/models/matrix.{}.RData".format(feature),
                Value(outcome),
-               "#output/models/gamlr.{}.{}.beta.csv".format(feature, outcome)],
+               "#output/models/bolasso.freq.{}.{}.csv".format(feature, outcome)],
               log_path="#output/models/postlasso.{}.{}.log".format(feature, outcome))
+        env.R("#output/models/bagged-lasso.{}.{}.y_pred.csv".format(feature, outcome),
+              ["bagged-lasso.R"] + \
+              ["#scratch/models/bolasso/gamlr.{}.{}.{}.RData".format(feature, outcome, i) 
+                for i in range(env.BOLASSO_BOOTSTRAPS)],
+              log_path="#output/models/bagged-lasso.{}.{}.log".format(feature, outcome))
+        env.Python("#output/models/postlasso.{}.{}.accuracy.csv".format(feature, outcome),
+                   ["accuracy.py",
+                    "#output/models/postlasso.{}.{}.y_pred.csv".format(feature, outcome)],
+                   log_path="#output/models/postlasso.{}.{}.accuracy.log".format(feature, outcome))
+        env.Python("#output/models/bagged-lasso.{}.{}.accuracy.csv".format(feature, outcome),
+                   ["accuracy.py",
+                    "#output/models/bagged-lasso.{}.{}.y_pred.csv".format(feature, outcome)],
+                   log_path="#output/models/bagged-lasso.{}.{}.accuracy.log".format(feature, outcome))
 
+# vim: syntax=python expandtab sw=4 ts=4

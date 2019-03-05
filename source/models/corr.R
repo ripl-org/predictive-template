@@ -1,4 +1,3 @@
-library(assertthat)
 library(Matrix)
 
 args <- commandArgs(trailingOnly=TRUE)
@@ -38,6 +37,5 @@ write.csv(top, file=out_file)
 
 k <- kappa(X_train, exact=TRUE)
 print(paste0("condition number (kappa): ", k))
-assert_that(k < 1000000)
 
 # vim: expandtab sw=4 ts=4
