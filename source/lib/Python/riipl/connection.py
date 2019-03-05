@@ -109,7 +109,7 @@ class Connection:
         cur = self.execute("""
                            SELECT CAST(SUM(ORA_HASH({})) AS VARCHAR2(255))
                              FROM {}
-                           """.format(" || '|' || ".join(c[0] for c in columns),
+                           """.format(" || '|' || ".join('"{}"'.format(c[0]) for c in columns),
                                       table.upper()))
         # Combine the data hash and the table schema hash
         checksum = "{}:{}".format(cur.fetchone()[0], table_hash)
@@ -126,11 +126,11 @@ class Connection:
         columns = self.get_columns(table)
         for col, dtype in columns:
             if (dtype == "NUMBER" or dtype == "LONG"):
-                sql.append("COUNT({0}), AVG({0}), STDDEV({0}), MIN({0}), MAX({0})".format(col))
+                sql.append('COUNT("{0}"), AVG("{0}"), STDDEV("{0}"), MIN("{0}"), MAX("{0}")'.format(col))
             elif (dtype == "DATE"):
-                sql.append("COUNT({0}), NULL, NULL, MIN({0}), MAX({0})".format(col))
+                sql.append('COUNT("{0}"), NULL, NULL, MIN("{0}"), MAX("{0}")'.format(col))
             else:
-                sql.append("COUNT({}), NULL, NULL, NULL, NULL".format(col))
+                sql.append('COUNT("{}"), NULL, NULL, NULL, NULL'.format(col))
         sql = "SELECT {} FROM {}".format(", ".join(sql), table)
         stats = self.execute(sql).fetchone()
 
@@ -220,7 +220,7 @@ TRAILING NULLCOLS
 
         # Clear and create the sql table
         self.clear_tables(table)
-        columns = ['{} {}'.format(x[0], x[1].partition(" ")[0]) for x in schema if x[1] is not "FILLER"]
+        columns = ['"{}" {}'.format(x[0], x[1].partition(" ")[0]) for x in schema if x[1] is not "FILLER"]
         sql = "CREATE TABLE {} ({})".format(table, ",\n  ".join(columns))
         self.execute(sql, verbose=True)
 
