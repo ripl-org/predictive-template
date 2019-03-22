@@ -27,6 +27,7 @@ import os
 import re
 from itertools import chain
 
+
 def setup_scons_entities(env):
     try:
         shell = env['SHELL']
@@ -67,6 +68,7 @@ def setup_scons_entities(env):
 
     return (shell, spawn, escape, ENV.copy())
 
+
 def get_log_path(source_file, env):
     log_path = env.get('log_path')
     if log_path:
@@ -86,6 +88,7 @@ def get_log_path(source_file, env):
         log_file = os.path.join('output', source_dir, filename + '.log')
 
     return(log_file)    
+
 
 def build_r(target, source, env):
     shell, spawn, escape, ENV = setup_scons_entities(env)
@@ -117,6 +120,7 @@ def build_r(target, source, env):
 
     return None
 
+
 def build_python(target, source, env):
 
     shell, spawn, escape, ENV = setup_scons_entities(env)
@@ -138,6 +142,7 @@ def build_python(target, source, env):
                                       command=' '.join(command))
 
     return None
+
 
 stata_error_re = re.compile('^r\(([0-9]+)\);$', flags = re.M)
 def build_stata(target, source, env):
@@ -187,10 +192,31 @@ def build_stata(target, source, env):
     return None
 
 
-r_builder = Builder(action = build_r)
-python_builder = Builder(action = build_python)
-stata_builder = Builder(action = build_stata)
+def build_latex(target, source, env):
 
-env.Append(BUILDERS = {'R': r_builder,
-                       'Python': python_builder,
-                       'Stata': stata_builder})
+    shell, spawn, escape, ENV = setup_scons_entities(env)
+
+    source = [str(node) for node in make_list_if_string(source)]
+    target = [str(node) for node in make_list_if_string(target)]
+
+    check_code_extension(source[0], "latex")
+    check_code_extension(target[0], "pdf")
+
+    ENV["SCONS_LOG_PATH"] = get_log_path(source[0], env)
+
+    command = ["pdflatex", "--jobname=" + os.path.splitext(target[0])[0], os.path.splitext(source[0])[0]]
+    result = spawn(shell, escape, command[0], command, ENV)
+    if result:
+        msg = "Error %s" % result
+        raise SCons.Errors.BuildError(errstr=msg,
+                                      status=result,
+                                      action=None,
+                                      command=" ".join(command))
+
+    return None
+
+
+env.Append(BUILDERS={"R": Builder(action=build_r),
+                     "Python": Builder(action=build_python),
+                     "Stata": Builder(action=build_stata),
+                     "Latex": Builder(action=build_latex)})
