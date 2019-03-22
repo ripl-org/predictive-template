@@ -90,15 +90,17 @@ def make_list_if_string(source):
         source = [str(source)]
     return source
 
-def check_code_extension(source_file, software):
-    extensions = {'stata'  : '.do',
-                  'r'      : '.r', 
-                  'lyx'    : '.lyx',
-                  'python' : '.py'}
-    ext = extensions[software]
-    source_file = str.lower(str(source_file))
-    if not source_file.endswith(ext):
-        raise BadExtensionError('First argument, ' + source_file + ', must be a ' + ext + ' file')
+def check_code_extension(filename, filetype):
+    extensions = {"stata"  : ".do",
+                  "r"      : ".r", 
+                  "lyx"    : ".lyx",
+                  "python" : ".py",
+                  "latex"  : ".tex",
+                  "pdf"    : ".pdf"}
+    ext = extensions[filetype]
+    filename = str(filename).lower()
+    if not filename.endswith(ext):
+        raise BadExtensionError("Argument " + filename + " must be a " + ext + " file")
     return None
 
 def current_time():

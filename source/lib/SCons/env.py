@@ -19,7 +19,6 @@ env_vars.update({
 })
 
 env = Environment(ENV=env_vars)
-setattr(env, "RIIPL_PROJECT", repo_root.rpartition("/")[2])
 setattr(env, "USERNAME", getpass.getuser())
 for k, v in CONSTANTS.items(): setattr(env, k, v)
 
