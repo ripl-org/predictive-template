@@ -5,19 +5,16 @@ library(Matrix)
 args <- commandArgs(trailingOnly=TRUE)
 
 n <- length(args)
-population_file <- args[1]
-outcomes_file   <- args[2]
-feature_files   <- args[3:(n-2)]
+outcomes_file   <- args[1]
+feature_files   <- args[2:(n-2)]
 out_file        <- args[n-1]
 train_file      <- args[n]
  
-pop <- fread(population_file)
-
-train    <- which(pop$SUBSET == "TRAINING")
-validate <- which(pop$SUBSET == "VALIDATION")
-test     <- which(pop$SUBSET == "TESTING")
-
 y <- fread(outcomes_file)
+
+train    <- which(y$SUBSET == "TRAINING")
+validate <- which(y$SUBSET == "VALIDATION")
+test     <- which(y$SUBSET == "TESTING")
 
 y_train    <- y[train,]
 y_validate <- y[validate,]
