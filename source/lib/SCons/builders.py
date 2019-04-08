@@ -25,7 +25,9 @@ from SCons.Util import is_String, is_List
 import SCons
 import os
 import re
+import shutil
 from itertools import chain
+from tempfile import mkstemp
 
 
 def setup_scons_entities(env):
@@ -144,7 +146,7 @@ def build_python(target, source, env):
     return None
 
 
-stata_error_re = re.compile('^r\(([0-9]+)\);$', flags = re.M)
+stata_error_re = re.compile("^r\(([0-9]+)\);$", flags = re.M)
 def build_stata(target, source, env):
     shell, spawn, escape, ENV = setup_scons_entities(env)
 
@@ -152,43 +154,42 @@ def build_stata(target, source, env):
     target      = [str(node) for node in make_list_if_string(target)]
     source_file = source[0]
 
-    check_code_extension(source_file, 'stata')
+    check_code_extension(source_file, "stata")
 
-    log_file    = get_log_path(source_file, env)
-    ENV['SCONS_LOG_PATH'] = log_file
+    log_file = get_log_path(source_file, env)
+    ENV["SCONS_LOG_PATH"] = log_file
 
-    other_args = env.get('other_args')
-    if other_args is None:
-        other_args = []
-    elif not isinstance(other_args, list):
-        raise BadArgumentError('other_args must be a list')
-    other_args = [str(arg) for arg in other_args]
+    # Move the do file to a unique temporary name, since Stata uses
+    # the do filename to create a log file (and does not provide any
+    # mechanism to choose a different location).
+    fh, do_file = mkstemp(prefix="stata_", suffix=".do", dir=".")
+    os.close(fh)
+    shutil.copy(source_file, do_file)
 
-    command = ['statamp', '-b', 'do'] + source + other_args + target
+    command = ["stata-mp", "-b", "do", do_file] + source[1:] + target
     result = spawn(shell, escape, command[0], command, ENV)
 
-    loc_log_file = os.path.basename(source_file).replace('.do','.log')
-
-    with open(loc_log_file, 'r') as loc_log_f:
-        stata_log_contents = loc_log_f.read()
+    batch_log_file = os.path.basename(do_file).replace(".do",".log")
+    with open(batch_log_file, "r") as batch_log_f:
+        stata_log_contents = batch_log_f.read()
         print(stata_log_contents)
 
-        with open(log_file, 'a') as log_f:
+        with open(log_file, "a") as log_f:
             log_f.write(stata_log_contents)
 
         error_matches = stata_error_re.search(stata_log_contents)
         if error_matches:
             result = int(error_matches.groups()[0])
 
-    os.remove(loc_log_file)
+    os.remove(do_file)
+    os.remove(batch_log_file)
 
     if result:
         msg = "Error %s" % result
         raise SCons.Errors.BuildError(errstr=msg,
                                       status=result,
                                       action=None,
-                                      command=' '.join(command))
-
+                                      command=" ".join(command))
     return None
 
 
